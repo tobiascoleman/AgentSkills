@@ -1,6 +1,6 @@
 ---
 name: task-continuity
-description: Keep concise task notes outside chat history across coding sessions. Use when starting, resuming, handing off, summarizing, updating, or closing ongoing coding tasks across chats; triggers include open a task, track this bug, continue, resume, handoff, task note, snapshot, tomorrow, close the task, context reset, new chat, where were we, and reduce token usage.
+description: Keep concise task notes outside chat history across coding sessions. Use when starting, resuming, listing, handing off, summarizing, updating, or closing ongoing coding tasks across chats; triggers include open a task, track this bug, what tasks do I have open, continue, resume, handoff, task note, snapshot, tomorrow, close the task, context reset, new chat, where were we, and reduce token usage.
 ---
 
 # Task Continuity

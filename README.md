@@ -12,6 +12,7 @@ Small, shareable Codex skills and helper scripts.
 Task continuity:
 
 - "Let's open a task to track this bug."
+- "What tasks do I have open?"
 - "Update the task so it can be worked on tomorrow."
 - "Add a note with what we found and the next step."
 - "Close the task as complete."
