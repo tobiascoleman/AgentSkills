@@ -1,0 +1,4 @@
+interface:
+  display_name: "Task Continuity"
+  short_description: "Persist concise coding task notes across chats."
+  default_prompt: "Use $task-continuity to resume this coding task from a saved task note."

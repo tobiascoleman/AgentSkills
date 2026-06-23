@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Handoff"
+  short_description: "Draft PR handoffs with author sections"
+  default_prompt: "Use $pr-handoff to draft a pull request description with human-authored sections and an agentic handoff."

@@ -1,0 +1,271 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+TASK_DIR="$CODEX_HOME/tasks"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  codex-task new <slug> "<goal>" [repo ...]
+  codex-task update [slug] [repo ...]
+  codex-task note [slug] "<note text>"
+  codex-task show [slug]
+  codex-task list
+  codex-task path [slug]
+
+Notes:
+  - If update/note/show/path omit slug, the most recently modified task is used.
+  - If new omits repos, the current git root is used when available.
+  - Task notes are Markdown files in ~/.codex/tasks.
+USAGE
+}
+
+die() {
+  printf 'codex-task: %s\n' "$*" >&2
+  exit 1
+}
+
+ensure_dirs() {
+  mkdir -p "$TASK_DIR"
+}
+
+slugify() {
+  local value="$*"
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  value="$(printf '%s' "$value" | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')"
+  [ -n "$value" ] || value="task"
+  printf '%s\n' "$value"
+}
+
+task_file() {
+  local slug
+  slug="$(slugify "$1")"
+  printf '%s/%s.md\n' "$TASK_DIR" "$slug"
+}
+
+latest_task() {
+  ensure_dirs
+  find "$TASK_DIR" -maxdepth 1 -type f -name '*.md' -printf '%T@ %p\n' 2>/dev/null \
+    | sort -nr \
+    | awk 'NR == 1 {print $2}'
+}
+
+resolve_task() {
+  local slug="${1:-}"
+  local file
+  if [ -n "$slug" ]; then
+    file="$(task_file "$slug")"
+  else
+    file="$(latest_task)"
+    [ -n "${file:-}" ] || die "no task notes found"
+  fi
+  [ -f "$file" ] || die "task note not found: $file"
+  printf '%s\n' "$file"
+}
+
+git_root_or_path() {
+  local path="${1:-$PWD}"
+  git -C "$path" rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$path"
+}
+
+repo_display_name() {
+  basename "$1"
+}
+
+snapshot_repo() {
+  local repo="$1"
+  local root
+  root="$(git_root_or_path "$repo")"
+
+  printf '### %s\n\n' "$(repo_display_name "$root")"
+  printf -- '- Path: `%s`\n' "$root"
+
+  if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local branch head
+    branch="$(git -C "$root" branch --show-current 2>/dev/null || true)"
+    head="$(git -C "$root" rev-parse --short HEAD 2>/dev/null || true)"
+    [ -n "$branch" ] || branch="detached"
+    printf -- '- Branch: `%s`\n' "$branch"
+    printf -- '- HEAD: `%s`\n' "$head"
+    printf '\nChanged files:\n\n'
+    local status
+    status="$(git -C "$root" status --short 2>/dev/null || true)"
+    if [ -n "$status" ]; then
+      printf '```text\n%s\n```\n\n' "$status"
+    else
+      printf '```text\nclean\n```\n\n'
+    fi
+    printf 'Recent commits:\n\n'
+    git -C "$root" log --oneline -5 2>/dev/null | sed 's/^/- /' || true
+    printf '\n'
+  else
+    printf -- '- Git: not a git repository\n\n'
+  fi
+}
+
+cmd_new() {
+  [ "$#" -ge 2 ] || die "new requires <slug> and <goal>"
+  ensure_dirs
+  local slug goal file now
+  slug="$(slugify "$1")"
+  goal="$2"
+  shift 2
+  file="$(task_file "$slug")"
+  [ ! -e "$file" ] || die "task already exists: $file"
+  now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+  local repos=("$@")
+  if [ "${#repos[@]}" -eq 0 ]; then
+    repos=("$(git_root_or_path "$PWD")")
+  fi
+
+  {
+    printf '# Task: %s\n\n' "$slug"
+    printf -- '- Created: `%s`\n' "$now"
+    printf -- '- Last Updated: `%s`\n\n' "$now"
+    printf '## Goal\n\n%s\n\n' "$goal"
+    printf '## Repos\n\n'
+    local repo root
+    for repo in "${repos[@]}"; do
+      root="$(git_root_or_path "$repo")"
+      printf -- '- `%s`\n' "$root"
+    done
+    printf '\n## Current State\n\n- Newly created task note.\n\n'
+    printf '## Decisions\n\n- None recorded yet.\n\n'
+    printf '## Tests\n\n- Not run yet.\n\n'
+    printf '## Next Steps\n\n1. Inspect the owning repo state.\n2. Update this note before switching context.\n\n'
+    printf '## Activity Log\n\n'
+  } > "$file"
+
+  cmd_update "$slug" "${repos[@]}"
+}
+
+cmd_update() {
+  ensure_dirs
+  local slug=""
+  if [ "$#" -gt 0 ] && [ -f "$(task_file "$1")" ]; then
+    slug="$1"
+    shift
+  elif [ "$#" -gt 0 ] && [ -f "$TASK_DIR/$(slugify "$1").md" ]; then
+    slug="$1"
+    shift
+  elif [ "$#" -gt 0 ] && [ "$1" != "." ] && [ -e "$TASK_DIR/$(slugify "$1").md" ]; then
+    slug="$1"
+    shift
+  elif [ "$#" -gt 0 ] && [ ! -e "$1" ] && [ -f "$(task_file "$1")" ]; then
+    slug="$1"
+    shift
+  fi
+
+  local file
+  file="$(resolve_task "$slug")"
+
+  local repos=("$@")
+  if [ "${#repos[@]}" -eq 0 ]; then
+    repos=("$(git_root_or_path "$PWD")")
+  fi
+
+  local now tmp
+  now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  tmp="$(mktemp)"
+  awk -v now="$now" '
+    /^- Last Updated: `/ { print "- Last Updated: `" now "`"; next }
+    { print }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+
+  {
+    printf '\n### Snapshot - %s\n\n' "$now"
+    local repo
+    for repo in "${repos[@]}"; do
+      snapshot_repo "$repo"
+    done
+  } >> "$file"
+
+  printf '%s\n' "$file"
+}
+
+cmd_note() {
+  ensure_dirs
+  [ "$#" -ge 1 ] || die "note requires text"
+
+  local slug="" text
+  if [ "$#" -ge 2 ] && [ -f "$(task_file "$1")" ]; then
+    slug="$1"
+    shift
+  fi
+  text="$*"
+
+  local file now tmp
+  file="$(resolve_task "$slug")"
+  now="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  tmp="$(mktemp)"
+  awk -v now="$now" '
+    /^- Last Updated: `/ { print "- Last Updated: `" now "`"; next }
+    { print }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+
+  {
+    printf '\n### Note - %s\n\n' "$now"
+    printf '%s\n' "$text"
+  } >> "$file"
+
+  printf '%s\n' "$file"
+}
+
+cmd_show() {
+  local file
+  file="$(resolve_task "${1:-}")"
+  sed -n '1,260p' "$file"
+}
+
+cmd_list() {
+  ensure_dirs
+  find "$TASK_DIR" -maxdepth 1 -type f -name '*.md' -printf '%T@ %f\n' 2>/dev/null \
+    | sort -nr \
+    | awk '{sub(/\.md$/, "", $2); printf "%s\n", $2}'
+}
+
+cmd_path() {
+  resolve_task "${1:-}"
+}
+
+main() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    new|start)
+      shift
+      cmd_new "$@"
+      ;;
+    update|snapshot)
+      shift
+      cmd_update "$@"
+      ;;
+    note)
+      shift
+      cmd_note "$@"
+      ;;
+    show|cat)
+      shift
+      cmd_show "$@"
+      ;;
+    list|ls)
+      cmd_list
+      ;;
+    path)
+      shift
+      cmd_path "$@"
+      ;;
+    -h|--help|help|"")
+      usage
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"
