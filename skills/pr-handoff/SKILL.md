@@ -1,6 +1,6 @@
 ---
 name: pr-handoff
-description: Generate pull request descriptions with human-authored sections plus an agentic handoff. Use when the user asks for a PR description, PR handoff, test instructions for a PR, affected areas, reviewer guidance, or wants an agent-authored technical handoff while preserving author-completed intent, impact, issue, dependency, and test sections.
+description: Generate pull request descriptions with human-authored sections plus an agentic handoff. Use when the user asks to print out the PR description for these changes, create a PR description, PR handoff, test instructions for a PR, affected areas, reviewer guidance, or wants an agent-authored technical handoff while preserving author-completed intent, impact, issue, dependency, and test sections.
 ---
 
 # PR Handoff

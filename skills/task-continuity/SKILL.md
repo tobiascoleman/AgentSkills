@@ -1,6 +1,6 @@
 ---
 name: task-continuity
-description: Keep concise task notes outside chat history across coding sessions. Use when starting, resuming, handing off, summarizing, or updating ongoing coding tasks across chats; triggers include continue, resume, handoff, task note, snapshot, context reset, new chat, where were we, and reduce token usage.
+description: Keep concise task notes outside chat history across coding sessions. Use when starting, resuming, handing off, summarizing, updating, or closing ongoing coding tasks across chats; triggers include open a task, track this bug, continue, resume, handoff, task note, snapshot, tomorrow, close the task, context reset, new chat, where were we, and reduce token usage.
 ---
 
 # Task Continuity
@@ -30,6 +30,11 @@ Use this skill to preserve task state across chats without relying on long conve
 - Add a repo snapshot with `codex-task update <slug> [repo ...]`.
 - Add a short note with `codex-task note <slug> "<decision, blocker, or next step>"`.
 - Prefer one clear sentence over a transcript-style summary.
+
+## Closing A Task
+
+- Mark completion with `codex-task note <slug> "Complete: <what was finished>"`.
+- Include any final validation or known follow-up in the same note.
 
 ## Guardrails
 

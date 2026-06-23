@@ -7,6 +7,23 @@ Small, shareable Codex skills and helper scripts.
 - `pr-handoff`: generates PR descriptions with human-authored sections preserved and an agent-authored technical handoff.
 - `task-continuity`: keeps concise task notes across chats using the bundled `codex-task` helper.
 
+## Useful Prompts
+
+Task continuity:
+
+- "Let's open a task to track this bug."
+- "Update the task so it can be worked on tomorrow."
+- "Add a note with what we found and the next step."
+- "Close the task as complete."
+- "Where were we on this task?"
+
+PR handoff:
+
+- "Print out the PR description for these changes."
+- "Give me a PR handoff for this branch."
+- "Add reviewer focus areas and validation performed."
+- "Give me affected areas for this PR."
+
 ## Not Included
 
 Project-specific skills, private repo conventions, saved task notes, credentials, and local environment details are intentionally excluded.
